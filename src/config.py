@@ -24,16 +24,15 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 OUTPUT_CSV = os.path.join(OUTPUT_DIR, "results.csv")
 
 # 5. Pathway Server Configuration
-PATHWAY_HOST = os.getenv("PATHWAY_HOST", "0.0.0.0")
+PATHWAY_HOST = os.getenv("PATHWAY_HOST", "localhost")
 PATHWAY_PORT = int(os.getenv("PATHWAY_PORT", 8000))
 
 # 6. Indexing & Retrieval Settings
-CHUNK_MIN_LENGTH = 100
-CHUNK_MAX_LENGTH = 1000
-CHUNK_OVERLAP = 100
+CHUNK_SIZE = 800
+CHUNK_OVERLAP = 150
 
 # Retrieval parameters
-TOP_K_RETRIEVAL = 3  # Number of evidence chunks to retrieve per fact
+TOP_K_RETRIEVAL = 5  # Number of evidence chunks to retrieve per fact
 
 # 7. Generation Parameters
 TEMPERATURE_EXTRACTION = 0.0
