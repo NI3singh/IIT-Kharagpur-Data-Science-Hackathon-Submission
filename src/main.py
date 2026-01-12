@@ -21,7 +21,6 @@ import traceback
 # Import configuration
 from config import (
     TEST_CSV,
-    TRAIN_CSV,
     OUTPUT_DIR,
     OUTPUT_CSV,
     PATHWAY_HOST,
@@ -80,15 +79,15 @@ def validate_environment_setup() -> None:
     
     # Check 2: Test CSV exists
     print(f"\n📋 Check 2: Input Data")
-    if not os.path.exists(TRAIN_CSV):
-        print(f"❌ Test CSV not found at: {TRAIN_CSV}")
-        print(f"   Expected location: {TRAIN_CSV}")
+    if not os.path.exists(TEST_CSV):
+        print(f"❌ Test CSV not found at: {TEST_CSV}")
+        print(f"   Expected location: {TEST_CSV}")
         sys.exit(1)
-    print(f"✓ Test CSV found: {TRAIN_CSV}")
+    print(f"✓ Test CSV found: {TEST_CSV}")
     
     # Check CSV structure
     try:
-        df = pd.read_csv(TRAIN_CSV)
+        df = pd.read_csv(TEST_CSV)
         print(f"✓ CSV loaded: {len(df)} rows")
         print(f"✓ Columns: {list(df.columns)}")
         
@@ -158,7 +157,7 @@ def load_test_data() -> pd.DataFrame:
     print("📂 LOADING TEST DATA")
     print("="*70)
     
-    df = pd.read_csv(TRAIN_CSV)
+    df = pd.read_csv(TEST_CSV)
     
     print(f"✓ Loaded {len(df)} test cases")
     print(f"✓ Columns: {list(df.columns)}")

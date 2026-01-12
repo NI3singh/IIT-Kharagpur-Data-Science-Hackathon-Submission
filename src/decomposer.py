@@ -32,43 +32,50 @@ RETRY_DELAY = 2  # seconds
 # SYSTEM PROMPT FOR CLAIM EXTRACTION
 # ============================================================================
 
-DECOMPOSER_SYSTEM_PROMPT = """You are a precision fact extractor for narrative consistency analysis.
+DECOMPOSER_SYSTEM_PROMPT = """You are a fact extractor for narrative verification.
 
 **YOUR TASK:**
-Extract 3-5 claims from the backstory at MULTIPLE LEVELS OF SPECIFICITY.
+Extract 4-6 TESTABLE claims from the backstory at different specificity levels.
 
 **EXTRACTION STRATEGY:**
-For each key assertion in the backstory, extract:
-1. HIGH-LEVEL claim (broad, easily verifiable)
-2. SPECIFIC claim (detailed, if mentioned)
+
+For each major assertion, extract:
+1. **Core factual claim** - What happened?
+2. **Character action claim** - What did characters do?
+3. **Relationship claim** - How did characters interact?
+4. **Motivation/Trait claim** - Why did they act this way?
+5. **Timeline claim** - When did this happen?
+
+**CLAIM QUALITY CHECKLIST:**
+✓ Can be verified against novel text
+✓ Specific enough to be testable
+✓ Not dependent on made-up names/details that may not appear in novel
+✓ Captures the ESSENCE of the backstory assertion
 
 **EXAMPLE:**
 
-Backstory: "Noirtier gave the conspiracy file to a British spy named Harrington, 
-            which led to his son's downfall."
+Backstory: "Noirtier handed the conspiracy dossier to a British spy named Harrington, 
+            which led to Villefort's downfall due to his guilt."
 
 Good Claims:
-✓ "Noirtier was involved in political conspiracies" (HIGH-LEVEL)
-✓ "Noirtier shared sensitive information with external parties" (MID-LEVEL)
-✓ "Noirtier's actions contributed to negative consequences for his family" (HIGH-LEVEL)
-✓ "Villefort (his son) experienced a downfall" (SPECIFIC)
+1. "Noirtier was involved in political conspiracies" (CORE FACT)
+2. "Noirtier shared sensitive information with foreign parties" (ACTION)
+3. "Noirtier's actions had negative consequences for Villefort" (RELATIONSHIP/CONSEQUENCE)
+4. "Villefort experienced a downfall or suffered consequences" (OUTCOME)
+5. "Noirtier made decisions that conflicted with his family's interests" (MOTIVATION)
 
-Avoid:
-✗ "A British spy named Harrington received files" (TOO SPECIFIC - name might not be in novel)
-✗ "The conspiracy directly caused the son's murder" (TOO SPECIFIC - exact causation might not be stated)
+Bad Claims (TOO SPECIFIC):
+✗ "A spy named Harrington received the files" - name may not exist in novel
+✗ "The dossier was about a specific conspiracy" - detail may not be mentioned
 
-**CRITICAL RULES:**
-1. Extract 3-5 claims that can be verified at DIFFERENT levels
-2. Include both broad claims (character traits, general events) and specific claims (particular actions)
-3. Avoid claims that rely on names/details that might not appear in the novel
-4. Each claim should be independently testable
-
-**OUTPUT FORMAT:**
+**OUTPUT:**
 {
   "claims": [
-    "Broad claim about character/situation",
-    "More specific claim about an event",
-    "Detailed claim if explicitly stated in backstory"
+    "Core factual claim",
+    "Character action claim", 
+    "Relationship or consequence claim",
+    "Outcome or result claim",
+    "Character motivation or trait claim"
   ]
 }
 
