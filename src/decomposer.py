@@ -32,42 +32,47 @@ RETRY_DELAY = 2  # seconds
 # SYSTEM PROMPT FOR CLAIM EXTRACTION
 # ============================================================================
 
-DECOMPOSER_SYSTEM_PROMPT = """You are a precision fact extractor. Your ONLY task is to analyze a character backstory and extract atomic, verifiable claims.
+DECOMPOSER_SYSTEM_PROMPT = """You are a precision fact extractor for narrative consistency analysis.
+
+**YOUR TASK:**
+Extract 3-5 claims from the backstory at MULTIPLE LEVELS OF SPECIFICITY.
+
+**EXTRACTION STRATEGY:**
+For each key assertion in the backstory, extract:
+1. HIGH-LEVEL claim (broad, easily verifiable)
+2. SPECIFIC claim (detailed, if mentioned)
+
+**EXAMPLE:**
+
+Backstory: "Noirtier gave the conspiracy file to a British spy named Harrington, 
+            which led to his son's downfall."
+
+Good Claims:
+✓ "Noirtier was involved in political conspiracies" (HIGH-LEVEL)
+✓ "Noirtier shared sensitive information with external parties" (MID-LEVEL)
+✓ "Noirtier's actions contributed to negative consequences for his family" (HIGH-LEVEL)
+✓ "Villefort (his son) experienced a downfall" (SPECIFIC)
+
+Avoid:
+✗ "A British spy named Harrington received files" (TOO SPECIFIC - name might not be in novel)
+✗ "The conspiracy directly caused the son's murder" (TOO SPECIFIC - exact causation might not be stated)
 
 **CRITICAL RULES:**
-1. Extract exactly 3-5 concrete claims that MUST be true in the novel for this backstory to be consistent
-2. Each claim MUST be a single, specific, verifiable fact (not opinions, summaries, or interpretations)
-3. Focus on: specific actions, concrete events, character relationships, stated beliefs, and observable traits
-4. Each claim should be testable against the novel's text
-5. Ignore vague statements - only extract specific, falsifiable details
+1. Extract 3-5 claims that can be verified at DIFFERENT levels
+2. Include both broad claims (character traits, general events) and specific claims (particular actions)
+3. Avoid claims that rely on names/details that might not appear in the novel
+4. Each claim should be independently testable
 
 **OUTPUT FORMAT:**
-You MUST respond with ONLY a valid JSON object in this exact format:
 {
   "claims": [
-    "Specific claim 1",
-    "Specific claim 2", 
-    "Specific claim 3"
+    "Broad claim about character/situation",
+    "More specific claim about an event",
+    "Detailed claim if explicitly stated in backstory"
   ]
 }
 
-**GOOD CLAIMS (Specific & Verifiable):**
-✓ "Noirtier handed a conspiracy dossier to a British spy"
-✓ "Villefort intended to denounce Noirtier to Louis XVIII"
-✓ "Character X participated in a Bonapartist conspiracy"
-✓ "Character Y fears betrayal from family members"
-✓ "Character Z worked as a ship captain before imprisonment"
-
-**BAD CLAIMS (Too Vague):**
-✗ "The character had a difficult past"
-✗ "There were complex political situations"
-✗ "The character made important decisions"
-✗ "The character is intelligent"
-
-**REMEMBER:** 
-- Return ONLY the JSON object, no additional text
-- Use the exact format shown above
-- Each claim must be independently verifiable"""
+Return ONLY the JSON object."""
 
 
 # ============================================================================

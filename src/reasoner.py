@@ -327,60 +327,58 @@ def _parse_search_results(results: any, claim_origin: str) -> List[Evidence]:
 # ============================================================================
 
 # System prompt for the Judge
-JUDGE_SYSTEM_PROMPT = """You are a strict literary consistency judge with expertise in narrative analysis.
+JUDGE_SYSTEM_PROMPT = """You are a FAIR literary consistency analyzer with expertise in narrative reasoning.
 
-**YOUR TASK:**
-You will receive:
-1. A CHARACTER BACKSTORY (hypothesis to verify)
-2. EVIDENCE from the novel (actual text excerpts with relevance scores)
+**FUNDAMENTAL PRINCIPLE:**
+"Absence of evidence is NOT evidence of contradiction."
 
-Determine: Is the backstory CONSISTENT with the evidence?
+A backstory is ONLY contradictory if it creates DIRECT conflicts with the novel.
 
-**CRITICAL ANALYSIS REQUIREMENTS:**
+**DECISION FRAMEWORK:**
 
-1. **Global Consistency**: Events must make sense across the timeline
-   - Does the backstory contradict later events?
-   - Would it make future actions illogical?
+🟢 CONSISTENT (1) - Mark as CONSISTENT if:
+1. The backstory contains NO direct contradictions with established facts
+2. All claims are either:
+   - Explicitly supported by evidence (high relevance)
+   - Plausible and not contradicted (medium/low relevance)
+   - Reasonable inferences that don't break the narrative
 
-2. **Causal Reasoning**: Verify cause-and-effect
-   - If backstory claims X, do later events support this?
-   - Are causal chains preserved?
+**KEY RULE:** If evidence is ABSENT or WEAK, but nothing CONTRADICTS the backstory → CONSISTENT
 
-3. **Narrative Constraints**: Check for story-breaking elements
-   - Does it violate established world rules?
-   - Does it create impossible coincidences?
+🔴 CONTRADICT (0) - ONLY mark as CONTRADICT if:
+1. Direct textual contradiction exists:
+   - Novel explicitly states X is false
+   - Backstory claims X is true
+   - Evidence CLEARLY shows this conflict
+2. Timeline impossibility:
+   - Backstory claims event at Time A
+   - Novel PROVES event couldn't happen at Time A
+3. Character trait impossibility:
+   - Backstory: "Character was always brave"
+   - Novel REPEATEDLY shows character was cowardly
+   - Evidence is STRONG (relevance > 70%)
 
-4. **Evidence Quality**: Consider relevance scores
-   - High relevance (low distance) = strong evidence
-   - Low relevance (high distance) = weak evidence
-   - Use patterns across multiple chunks
+**EVIDENCE INTERPRETATION:**
+- Relevance > 70% (distance < 0.3): STRONG evidence - use for judgment
+- Relevance 40-70% (distance 0.3-0.6): MODERATE - use cautiously
+- Relevance < 40% (distance > 0.6): WEAK - do NOT use to contradict
+  
+**CRITICAL GUIDELINE:**
+When evidence is weak or missing for a claim:
+- Ask: "Does the NOVEL EXPLICITLY DENY this claim?"
+- If NO → Mark CONSISTENT (it's plausible)
+- If YES → Mark CONTRADICT (it's contradicted)
 
-**CONSISTENCY RULES:**
-
-✓ CONSISTENT (1) if:
-- Backstory aligns with character development
-- No major contradictions with established facts
-- Causal relationships make sense
-- Could reasonably fit the narrative
-
-✗ CONTRADICT (0) if:
-- Direct contradictions (backstory says X, novel says NOT X)
-- Creates logical impossibilities
-- Makes character actions nonsensical
-- Violates timeline or causality
+**DEFAULT STANCE:**
+When uncertain → favor CONSISTENT unless clear contradiction exists.
 
 **OUTPUT FORMAT:**
-After analysis, output ONLY a JSON object:
-
 {
-  "prediction": 0,
-  "rationale": "Brief explanation with specific evidence citations"
+  "prediction": 1,
+  "rationale": "Brief explanation citing specific evidence or noting absence of contradiction"
 }
 
-CRITICAL:
-- prediction = 0 or 1 (integer)
-- rationale = 2-4 sentences with evidence
-- Think deeply - focus on logical consistency"""
+Remember: Your job is to find CONTRADICTIONS, not to verify every detail exists in the text."""
 
 
 def judge_consistency(
@@ -428,7 +426,7 @@ def judge_consistency(
     evidence_context = _format_evidence_with_metadata(evidence_list, verbose)
     
     # Construct judgment prompt
-    user_prompt = _construct_judge_prompt(backstory, evidence_context)
+    user_prompt = _construct_judge_prompt(backstory, evidence_context, evidence_list)
     
     if verbose:
         print(f"📊 Total context: {len(user_prompt)} chars")
@@ -488,37 +486,44 @@ def _format_evidence_with_metadata(evidence_list: List[Evidence], verbose: bool)
     """
     Format evidence preserving metadata (distance, source, origin).
     
-    This is CRITICAL - by including metadata, the Judge can weigh evidence quality.
+    CRITICAL: Properly handle weak evidence to avoid false contradictions.
     """
-    RELEVANCE_THRESHOLD = 0.4  # Only use evidence with distance < 0.6
     
-    filtered_evidence = [
-        ev for ev in evidence_list 
-        if ev.distance < (1 - RELEVANCE_THRESHOLD)
-    ]
-    
-    if len(filtered_evidence) < 3:
-        # Not enough quality evidence
-        # Add a note to the Judge
-        context_parts.append(
-            "\n⚠️ WARNING: Limited high-quality evidence found. "
-            "Consider this when judging - lack of evidence ≠ contradiction.\n"
-        )
-        # Use all evidence if we have too little
-        filtered_evidence = evidence_list
-    
-    # Sort by relevance (distance)
+    # Sort by relevance first
     sorted_evidence = sorted(evidence_list, key=lambda e: e.distance)
+    
+    # Categorize evidence by strength
+    strong_evidence = [e for e in sorted_evidence if e.distance < 0.3]
+    moderate_evidence = [e for e in sorted_evidence if 0.3 <= e.distance < 0.6]
+    weak_evidence = [e for e in sorted_evidence if e.distance >= 0.6]
     
     context_parts = []
     context_parts.append("EVIDENCE FROM THE NOVEL:")
     context_parts.append("=" * 60)
     
+    # Add evidence quality summary
+    if not strong_evidence and not moderate_evidence:
+        context_parts.append("\n⚠️ CRITICAL GUIDANCE:")
+        context_parts.append("All evidence has LOW relevance (< 40%).")
+        context_parts.append("This means:")
+        context_parts.append("- The claims may not be explicitly mentioned in the novel")
+        context_parts.append("- DO NOT interpret this as contradiction")
+        context_parts.append("- Only mark CONTRADICT if you find EXPLICIT conflicting text")
+        context_parts.append("- Default to CONSISTENT (plausible, not contradicted)\n")
+    
+    # Format all evidence with clear strength indicators
     for i, evidence in enumerate(sorted_evidence, 1):
-        # Relevance score (inverse of distance, scaled 0-1)
         relevance = 1 - min(evidence.distance, 1.0)
         
-        context_parts.append(f"\n[Evidence {i}]")
+        # Strength label
+        if evidence.distance < 0.3:
+            strength = "STRONG"
+        elif evidence.distance < 0.6:
+            strength = "MODERATE"
+        else:
+            strength = "WEAK - Use cautiously"
+        
+        context_parts.append(f"\n[Evidence {i}] - {strength}")
         context_parts.append(f"Source: {evidence.source}")
         context_parts.append(f"Relevance: {relevance:.2%} (distance: {evidence.distance:.3f})")
         context_parts.append(f"Related to: {evidence.claim_origin}")
@@ -528,15 +533,28 @@ def _format_evidence_with_metadata(evidence_list: List[Evidence], verbose: bool)
     formatted = "\n".join(context_parts)
     
     if verbose:
-        print(f"✓ Formatted {len(sorted_evidence)} evidence chunks with metadata")
+        print(f"✓ Formatted {len(sorted_evidence)} evidence chunks")
+        print(f"   Strong: {len(strong_evidence)}, Moderate: {len(moderate_evidence)}, Weak: {len(weak_evidence)}")
     
     return formatted
 
 
-def _construct_judge_prompt(backstory: str, evidence_context: str) -> str:
+def _construct_judge_prompt(backstory: str, evidence_context: str, evidence_list: List[Evidence]) -> str:
     """Construct the complete user prompt for the judge."""
     
+    evidence_strength = _assess_overall_evidence_strength(evidence_list)
+    
+    strength_guidance = {
+        "STRONG_EVIDENCE": "The evidence is STRONG. Use it confidently for your judgment.",
+        "MODERATE_EVIDENCE": "The evidence is MODERATE. Consider it, but be aware of limitations.",
+        "WEAK_EVIDENCE": "⚠️ CRITICAL: Evidence is WEAK. Only mark CONTRADICT if you find EXPLICIT conflicts. Default to CONSISTENT.",
+        "NO_EVIDENCE": "No evidence found. Mark as CONSISTENT (plausible, not contradicted)."
+    }
+    
     prompt = f"""Analyze consistency between this backstory and novel evidence.
+
+**EVIDENCE STRENGTH ASSESSMENT:** {evidence_strength}
+{strength_guidance[evidence_strength]}
 
 {evidence_context}
 
@@ -546,21 +564,20 @@ CHARACTER BACKSTORY TO VERIFY:
 {'=' * 60}
 
 ANALYZE:
-1. Does evidence SUPPORT the backstory?
-2. Does evidence CONTRADICT the backstory?
-3. Are there logical inconsistencies?
-4. Do causal relationships make sense?
-5. Consider relevance scores - high relevance = stronger evidence
+1. Is there EXPLICIT CONTRADICTORY evidence? (Not just absence)
+2. Do the claims make logical sense given what we know?
+3. Would accepting this backstory break the narrative?
+4. Consider evidence strength - weak evidence should NOT be used to contradict
 
 Output your verdict as JSON:
 {{
-  "prediction": 0,
+  "prediction": 1,
   "rationale": "Your explanation"
 }}
 
 Remember:
-- prediction = 1 (CONSISTENT) or 0 (CONTRADICT)
-- Base decision on EVIDENCE and LOGIC"""
+- prediction = 1 (CONSISTENT - default) or 0 (CONTRADICT - needs clear evidence)
+- If uncertain or evidence is weak → CONSISTENT"""
     
     return prompt
 
@@ -697,6 +714,26 @@ def _parse_json_fallback(text: str) -> Tuple[int, str]:
             continue
     raise ValueError("No valid JSON found")
 
+def _assess_overall_evidence_strength(evidence_list: List[Evidence]) -> str:
+    """
+    Assess the overall strength of evidence collection.
+    Returns guidance for the Judge.
+    """
+    if not evidence_list:
+        return "NO_EVIDENCE"
+    
+    strong_count = sum(1 for e in evidence_list if e.distance < 0.3)
+    moderate_count = sum(1 for e in evidence_list if 0.3 <= e.distance < 0.6)
+    weak_count = sum(1 for e in evidence_list if e.distance >= 0.6)
+    
+    total = len(evidence_list)
+    
+    if strong_count / total > 0.5:
+        return "STRONG_EVIDENCE"
+    elif moderate_count / total > 0.4:
+        return "MODERATE_EVIDENCE"
+    else:
+        return "WEAK_EVIDENCE"
 
 # ============================================================================
 # UTILITY FUNCTIONS

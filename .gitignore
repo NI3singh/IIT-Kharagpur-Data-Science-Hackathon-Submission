@@ -9,3 +9,9 @@ pathway_app/__pycache__/app.cpython-310.pyc
 src/__pycache__/config.cpython-310.pyc
 src/__pycache__/decomposer.cpython-310.pyc
 src/__pycache__/reasoner.cpython-310.pyc
+
+KDSH-venv/
+
+output/
+
+evaluate.py
