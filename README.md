@@ -577,10 +577,4 @@ For questions, suggestions, or collaboration opportunities, please reach out via
 
 **Built with ❤️ for IIT Kharagpur Data Science Hackathon 2026**
 
----
 
-*"In literature, as in life, consistency is the hobgoblin of small minds—unless you're verifying character backstories with AI, in which case it's the whole point."*
-
----
-
-**Project Status:** ✅ Production Ready | **Success Rate:** 98.3% | **Processing Speed:** ~15s/backstory | **Lines of Code:** ~2,800
